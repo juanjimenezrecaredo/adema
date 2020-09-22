@@ -1,0 +1,587 @@
+---
+title: "Using Machine Learning Algorithms for the Computer-Aided Assessment of Periapical Lesions in 2D Periapical Radiography Images"
+author: "C. Bennasar$^1$, Y. Cid$^{1,2}$, I. García$^{1,2,*}$, J. Jiménez$^1$ and F. Pérez$^3$"
+date: "09/04/2020"
+output: html_document
+---
+```{r echo=FALSE, message=FALSE, warning=FALSE, cache=FALSE}
+library (MASS)
+library (ISLR)
+library (leaps)
+library(ggstatsplot)
+library(ggplot2)
+library(caret)
+library(car)
+library(psych)
+library(randomForest)
+require(nnet)
+require(reshape2)
+library(class)
+library(e1071)
+library(neuralnet)
+library(irr)
+library( epiR)
+```
+
+```{r echo=FALSE}
+library(readxl)
+datos <- read_excel("datos.xlsx")
+datos.v=datos[c("cat","rob","ram","var","per","verg","balle")]
+
+N=500
+s=1.0
+k2.cat=rep(0,N)
+k3.cat=rep(0,N)
+k4.cat=rep(0,N)
+k5.cat=rep(0,N)
+k6.cat=rep(0,N)
+k7.cat=rep(0,N)
+
+k3.rob=rep(0,N)
+k4.rob=rep(0,N)
+k5.rob=rep(0,N)
+k6.rob=rep(0,N)
+k7.rob=rep(0,N)
+
+k4.ram=rep(0,N)
+k5.ram=rep(0,N)
+k6.ram=rep(0,N)
+k7.ram=rep(0,N)
+
+k5.var=rep(0,N)
+k6.var=rep(0,N)
+k7.var=rep(0,N)
+
+k6.per=rep(0,N)
+k7.per=rep(0,N)
+
+k7.verg=rep(0,N)
+
+for(i in 1:N)
+{
+                #set.seed(100)
+                index = sample(seq_len(nrow(datos.v)), size = s*nrow(datos.v), replace=T)
+                boostraped = datos.v[index,]
+                
+                cat2=boostraped[c(1,2)]
+                k2.cat[i]=kappam.fleiss(cat2, detail = T)$value
+                cat3=boostraped[c(1,3)]
+                k3.cat[i]=kappam.fleiss(cat3, detail = T)$value
+                cat4=boostraped[c(1,4)]
+                k4.cat[i]=kappam.fleiss(cat4, detail = T)$value
+                cat5=boostraped[c(1,5)]
+                k5.cat[i]=kappam.fleiss(cat5, detail = T)$value
+                cat6=boostraped[c(1,6)]
+                k6.cat[i]=kappam.fleiss(cat6, detail = T)$value
+                cat7=boostraped[c(1,7)]
+                k7.cat[i]=kappam.fleiss(cat7, detail = T)$value
+                
+                rob3=boostraped[c(2,3)]
+                k3.rob[i]=kappam.fleiss(rob3, detail = T)$value
+                rob4=boostraped[c(2,4)]
+                k4.rob[i]=kappam.fleiss(rob4, detail = T)$value
+                rob5=boostraped[c(2,5)]
+                k5.rob[i]=kappam.fleiss(rob5, detail = T)$value
+                rob6=boostraped[c(2,6)]
+                k6.rob[i]=kappam.fleiss(rob6, detail = T)$value
+                rob7=boostraped[c(2,7)]
+                k7.rob[i]=kappam.fleiss(rob7, detail = T)$value
+                
+                ram4=boostraped[c(3,4)]
+                k4.ram[i]=kappam.fleiss(ram4, detail = T)$value
+                ram5=boostraped[c(3,5)]
+                k5.ram[i]=kappam.fleiss(ram5, detail = T)$value
+                ram6=boostraped[c(3,6)]
+                k6.ram[i]=kappam.fleiss(ram6, detail = T)$value
+                ram7=boostraped[c(3,7)]
+                k7.ram[i]=kappam.fleiss(ram7, detail = T)$value
+                
+                var5=boostraped[c(4,5)]
+                k5.var[i]=kappam.fleiss(var5, detail = T)$value
+                var6=boostraped[c(4,6)]
+                k6.var[i]=kappam.fleiss(var6, detail = T)$value
+                var7=boostraped[c(4,7)]
+                k7.var[i]=kappam.fleiss(var7, detail = T)$value
+                
+                per6=boostraped[c(5,6)]
+                k6.per[i]=kappam.fleiss(per6, detail = T)$value
+                per7=boostraped[c(5,7)]
+                k7.per[i]=kappam.fleiss(per7, detail = T)$value
+                
+                verg7=boostraped[c(6,7)]
+                k7.verg[i]=kappam.fleiss(verg7, detail = T)$value
+               
+}
+k.v=c(k2.cat,k3.cat,k4.cat,k5.cat,k6.cat,k7.cat,k3.rob,k4.rob,k5.rob,k6.rob,k7.rob,k4.ram,k5.ram,k6.ram,k7.ram,k5.var,k6.var,k7.var,k6.per,k7.per,k7.verg)
+hist(k.v)
+summary(k.v)
+quantile(k.v,0.025)
+
+library(readxl)
+datos.tot <- read_excel("datos.xlsx")
+datos=datos.tot[datos.tot$position=="IC",]
+datos.v=datos[c("cat","rob","ram","var","per","verg","balle")]
+
+N=500
+s=1.0
+k2.cat=rep(0,N)
+k3.cat=rep(0,N)
+k4.cat=rep(0,N)
+k5.cat=rep(0,N)
+k6.cat=rep(0,N)
+k7.cat=rep(0,N)
+
+k3.rob=rep(0,N)
+k4.rob=rep(0,N)
+k5.rob=rep(0,N)
+k6.rob=rep(0,N)
+k7.rob=rep(0,N)
+
+k4.ram=rep(0,N)
+k5.ram=rep(0,N)
+k6.ram=rep(0,N)
+k7.ram=rep(0,N)
+
+k5.var=rep(0,N)
+k6.var=rep(0,N)
+k7.var=rep(0,N)
+
+k6.per=rep(0,N)
+k7.per=rep(0,N)
+
+k7.verg=rep(0,N)
+
+for(i in 1:N)
+{
+                #set.seed(100)
+                index = sample(seq_len(nrow(datos.v)), size = s*nrow(datos.v), replace=T)
+                boostraped = datos.v[index,]
+                
+                cat2=boostraped[c(1,2)]
+                k2.cat[i]=kappam.fleiss(cat2, detail = T)$value
+                cat3=boostraped[c(1,3)]
+                k3.cat[i]=kappam.fleiss(cat3, detail = T)$value
+                cat4=boostraped[c(1,4)]
+                k4.cat[i]=kappam.fleiss(cat4, detail = T)$value
+                cat5=boostraped[c(1,5)]
+                k5.cat[i]=kappam.fleiss(cat5, detail = T)$value
+                cat6=boostraped[c(1,6)]
+                k6.cat[i]=kappam.fleiss(cat6, detail = T)$value
+                cat7=boostraped[c(1,7)]
+                k7.cat[i]=kappam.fleiss(cat7, detail = T)$value
+                
+                rob3=boostraped[c(2,3)]
+                k3.rob[i]=kappam.fleiss(rob3, detail = T)$value
+                rob4=boostraped[c(2,4)]
+                k4.rob[i]=kappam.fleiss(rob4, detail = T)$value
+                rob5=boostraped[c(2,5)]
+                k5.rob[i]=kappam.fleiss(rob5, detail = T)$value
+                rob6=boostraped[c(2,6)]
+                k6.rob[i]=kappam.fleiss(rob6, detail = T)$value
+                rob7=boostraped[c(2,7)]
+                k7.rob[i]=kappam.fleiss(rob7, detail = T)$value
+                
+                ram4=boostraped[c(3,4)]
+                k4.ram[i]=kappam.fleiss(ram4, detail = T)$value
+                ram5=boostraped[c(3,5)]
+                k5.ram[i]=kappam.fleiss(ram5, detail = T)$value
+                ram6=boostraped[c(3,6)]
+                k6.ram[i]=kappam.fleiss(ram6, detail = T)$value
+                ram7=boostraped[c(3,7)]
+                k7.ram[i]=kappam.fleiss(ram7, detail = T)$value
+                
+                var5=boostraped[c(4,5)]
+                k5.var[i]=kappam.fleiss(var5, detail = T)$value
+                var6=boostraped[c(4,6)]
+                k6.var[i]=kappam.fleiss(var6, detail = T)$value
+                var7=boostraped[c(4,7)]
+                k7.var[i]=kappam.fleiss(var7, detail = T)$value
+                
+                per6=boostraped[c(5,6)]
+                k6.per[i]=kappam.fleiss(per6, detail = T)$value
+                per7=boostraped[c(5,7)]
+                k7.per[i]=kappam.fleiss(per7, detail = T)$value
+                
+                verg7=boostraped[c(6,7)]
+                k7.verg[i]=kappam.fleiss(verg7, detail = T)$value
+               
+}
+k.v=c(k2.cat,k3.cat,k4.cat,k5.cat,k6.cat,k7.cat,k3.rob,k4.rob,k5.rob,k6.rob,k7.rob,k4.ram,k5.ram,k6.ram,k7.ram,k5.var,k6.var,k7.var,k6.per,k7.per,k7.verg)
+hist(k.v)
+summary(k.v)
+quantile(k.v,0.025)
+quantile(k.v,0.975)
+
+library(readxl)
+datos.tot <- read_excel("datos.xlsx")
+datos=datos.tot[datos.tot$position=="PM",]
+datos.v=datos[c("cat","rob","ram","var","per","verg","balle")]
+
+N=500
+s=1.0
+k2.cat=rep(0,N)
+k3.cat=rep(0,N)
+k4.cat=rep(0,N)
+k5.cat=rep(0,N)
+k6.cat=rep(0,N)
+k7.cat=rep(0,N)
+
+k3.rob=rep(0,N)
+k4.rob=rep(0,N)
+k5.rob=rep(0,N)
+k6.rob=rep(0,N)
+k7.rob=rep(0,N)
+
+k4.ram=rep(0,N)
+k5.ram=rep(0,N)
+k6.ram=rep(0,N)
+k7.ram=rep(0,N)
+
+k5.var=rep(0,N)
+k6.var=rep(0,N)
+k7.var=rep(0,N)
+
+k6.per=rep(0,N)
+k7.per=rep(0,N)
+
+k7.verg=rep(0,N)
+
+for(i in 1:N)
+{
+                #set.seed(100)
+                index = sample(seq_len(nrow(datos.v)), size = s*nrow(datos.v), replace=T)
+                boostraped = datos.v[index,]
+                
+                cat2=boostraped[c(1,2)]
+                k2.cat[i]=kappam.fleiss(cat2, detail = T)$value
+                cat3=boostraped[c(1,3)]
+                k3.cat[i]=kappam.fleiss(cat3, detail = T)$value
+                cat4=boostraped[c(1,4)]
+                k4.cat[i]=kappam.fleiss(cat4, detail = T)$value
+                cat5=boostraped[c(1,5)]
+                k5.cat[i]=kappam.fleiss(cat5, detail = T)$value
+                cat6=boostraped[c(1,6)]
+                k6.cat[i]=kappam.fleiss(cat6, detail = T)$value
+                cat7=boostraped[c(1,7)]
+                k7.cat[i]=kappam.fleiss(cat7, detail = T)$value
+                
+                rob3=boostraped[c(2,3)]
+                k3.rob[i]=kappam.fleiss(rob3, detail = T)$value
+                rob4=boostraped[c(2,4)]
+                k4.rob[i]=kappam.fleiss(rob4, detail = T)$value
+                rob5=boostraped[c(2,5)]
+                k5.rob[i]=kappam.fleiss(rob5, detail = T)$value
+                rob6=boostraped[c(2,6)]
+                k6.rob[i]=kappam.fleiss(rob6, detail = T)$value
+                rob7=boostraped[c(2,7)]
+                k7.rob[i]=kappam.fleiss(rob7, detail = T)$value
+                
+                ram4=boostraped[c(3,4)]
+                k4.ram[i]=kappam.fleiss(ram4, detail = T)$value
+                ram5=boostraped[c(3,5)]
+                k5.ram[i]=kappam.fleiss(ram5, detail = T)$value
+                ram6=boostraped[c(3,6)]
+                k6.ram[i]=kappam.fleiss(ram6, detail = T)$value
+                ram7=boostraped[c(3,7)]
+                k7.ram[i]=kappam.fleiss(ram7, detail = T)$value
+                
+                var5=boostraped[c(4,5)]
+                k5.var[i]=kappam.fleiss(var5, detail = T)$value
+                var6=boostraped[c(4,6)]
+                k6.var[i]=kappam.fleiss(var6, detail = T)$value
+                var7=boostraped[c(4,7)]
+                k7.var[i]=kappam.fleiss(var7, detail = T)$value
+                
+                per6=boostraped[c(5,6)]
+                k6.per[i]=kappam.fleiss(per6, detail = T)$value
+                per7=boostraped[c(5,7)]
+                k7.per[i]=kappam.fleiss(per7, detail = T)$value
+                
+                verg7=boostraped[c(6,7)]
+                k7.verg[i]=kappam.fleiss(verg7, detail = T)$value
+               
+}
+k.v=c(k2.cat,k3.cat,k4.cat,k5.cat,k6.cat,k7.cat,k3.rob,k4.rob,k5.rob,k6.rob,k7.rob,k4.ram,k5.ram,k6.ram,k7.ram,k5.var,k6.var,k7.var,k6.per,k7.per,k7.verg)
+hist(k.v)
+summary(k.v)
+quantile(k.v,0.025)
+quantile(k.v,0.975)
+
+library(readxl)
+datos.tot <- read_excel("datos.xlsx")
+datos=datos.tot[datos.tot$position=="M",]
+datos.v=datos[c("cat","rob","ram","var","per","verg","balle")]
+
+N=500
+s=1.0
+k2.cat=rep(0,N)
+k3.cat=rep(0,N)
+k4.cat=rep(0,N)
+k5.cat=rep(0,N)
+k6.cat=rep(0,N)
+k7.cat=rep(0,N)
+
+k3.rob=rep(0,N)
+k4.rob=rep(0,N)
+k5.rob=rep(0,N)
+k6.rob=rep(0,N)
+k7.rob=rep(0,N)
+
+k4.ram=rep(0,N)
+k5.ram=rep(0,N)
+k6.ram=rep(0,N)
+k7.ram=rep(0,N)
+
+k5.var=rep(0,N)
+k6.var=rep(0,N)
+k7.var=rep(0,N)
+
+k6.per=rep(0,N)
+k7.per=rep(0,N)
+
+k7.verg=rep(0,N)
+
+for(i in 1:N)
+{
+                #set.seed(100)
+                index = sample(seq_len(nrow(datos.v)), size = s*nrow(datos.v), replace=T)
+                boostraped = datos.v[index,]
+                
+                cat2=boostraped[c(1,2)]
+                k2.cat[i]=kappam.fleiss(cat2, detail = T)$value
+                cat3=boostraped[c(1,3)]
+                k3.cat[i]=kappam.fleiss(cat3, detail = T)$value
+                cat4=boostraped[c(1,4)]
+                k4.cat[i]=kappam.fleiss(cat4, detail = T)$value
+                cat5=boostraped[c(1,5)]
+                k5.cat[i]=kappam.fleiss(cat5, detail = T)$value
+                cat6=boostraped[c(1,6)]
+                k6.cat[i]=kappam.fleiss(cat6, detail = T)$value
+                cat7=boostraped[c(1,7)]
+                k7.cat[i]=kappam.fleiss(cat7, detail = T)$value
+                
+                rob3=boostraped[c(2,3)]
+                k3.rob[i]=kappam.fleiss(rob3, detail = T)$value
+                rob4=boostraped[c(2,4)]
+                k4.rob[i]=kappam.fleiss(rob4, detail = T)$value
+                rob5=boostraped[c(2,5)]
+                k5.rob[i]=kappam.fleiss(rob5, detail = T)$value
+                rob6=boostraped[c(2,6)]
+                k6.rob[i]=kappam.fleiss(rob6, detail = T)$value
+                rob7=boostraped[c(2,7)]
+                k7.rob[i]=kappam.fleiss(rob7, detail = T)$value
+                
+                ram4=boostraped[c(3,4)]
+                k4.ram[i]=kappam.fleiss(ram4, detail = T)$value
+                ram5=boostraped[c(3,5)]
+                k5.ram[i]=kappam.fleiss(ram5, detail = T)$value
+                ram6=boostraped[c(3,6)]
+                k6.ram[i]=kappam.fleiss(ram6, detail = T)$value
+                ram7=boostraped[c(3,7)]
+                k7.ram[i]=kappam.fleiss(ram7, detail = T)$value
+                
+                var5=boostraped[c(4,5)]
+                k5.var[i]=kappam.fleiss(var5, detail = T)$value
+                var6=boostraped[c(4,6)]
+                k6.var[i]=kappam.fleiss(var6, detail = T)$value
+                var7=boostraped[c(4,7)]
+                k7.var[i]=kappam.fleiss(var7, detail = T)$value
+                
+                per6=boostraped[c(5,6)]
+                k6.per[i]=kappam.fleiss(per6, detail = T)$value
+                per7=boostraped[c(5,7)]
+                k7.per[i]=kappam.fleiss(per7, detail = T)$value
+                
+                verg7=boostraped[c(6,7)]
+                k7.verg[i]=kappam.fleiss(verg7, detail = T)$value
+               
+}
+k.v=c(k2.cat,k3.cat,k4.cat,k5.cat,k6.cat,k7.cat,k3.rob,k4.rob,k5.rob,k6.rob,k7.rob,k4.ram,k5.ram,k6.ram,k7.ram,k5.var,k6.var,k7.var,k6.per,k7.per,k7.verg)
+hist(k.v)
+summary(k.v)
+quantile(k.v,0.025)
+quantile(k.v,0.975)
+
+library(readxl)
+datos <- read_excel("datos.xlsx")
+datos$datos1=round(datos$cat+datos$per+datos$balle/3)
+datos$datos2=round(datos$rob+datos$var+datos$ram/3)
+
+N=500
+s=1.0
+k.g=rep(0,N)
+for(i in 1:N)
+{
+                #set.seed(100)
+                index = sample(seq_len(nrow(datos)), size = s*nrow(datos), replace=T)
+                boostraped = datos[index,]
+                expertos=boostraped[c(10,11)]
+                k.g[i]=kappam.fleiss(expertos, detail = T)$value
+}
+hist(k.g)
+summary(k.g)
+quantile(k.g,0.025)
+quantile(k.g,0.975)
+```
+
+
+```{r}
+ML=read.table(file = "ML.txt", header = T)
+cat.dat=ML[c("position","cat.v","cat.b","cat.l")]
+names(cat.dat)=c("position","v","b","l")
+
+rob.dat=ML[c("position","rob.v","rob.b","rob.l")]
+names(rob.dat)=c("position","v","b","l")
+
+ram.dat=ML[c("position","ram.v","ram.b","ram.l")]
+names(ram.dat)=c("position","v","b","l")
+
+var.dat=ML[c("position","var.v","var.b","var.l")]
+names(var.dat)=c("position","v","b","l")
+
+per.dat=ML[c("position","per.v","per.b","per.l")]
+names(per.dat)=c("position","v","b","l")
+
+verg.dat=ML[c("position","verg.v","verg.b","verg.l")]
+names(verg.dat)=c("position","v","b","l")
+
+balle.dat=ML[c("position","balle.v","balle.b","balle.l")]
+names(balle.dat)=c("position","v","b","l")
+
+catalogo.todos=rbind(cat.dat,rob.dat,ram.dat,var.dat,verg.dat,verg.dat,balle.dat)
+
+```
+
+
+```{r warning=FALSE}
+                data.lr=catalogo.todos
+              
+                #Random sampling
+                samplesize = 0.8*nrow(data.lr)
+                set.seed(100) # for reproducibility
+                index = sample(seq_len(nrow(data.lr)), size = samplesize, replace = F)
+                train= data.lr[index, ]
+                test = data.lr[-index,]
+              
+                
+                  # Fitting Multiple Logistic Regression and predicting
+                  glm.fit= glm(v ~ ., data = data.lr, family = binomial)
+                  glm.pred = predict(glm.fit, newdata = test, type = "response")
+                  
+                  
+```
+
+
+Let's see how important is each covariate in the regression:
+
+
+```{r}
+summary(glm.fit)
+```
+
+Next, to assess the performance of the model, I predict on the testing set, generating the confusion matrix, and computing the sensitivity and specificity:
+
+```{r}
+                  predicted = ifelse(glm.pred > 0.5,"1", "0")
+                  observed= test$v
+                  M=table (predicted,observed)
+                  M
+                  sensitivity(M)
+                  specificity(M)
+```
+
+Finally the accuracy of the model (i.e. the percentage of observations that were correctly predicted in the testing set) is given by:
+```{r}
+A=100*(M[1,1]+M[2,2])/(length(test$v))
+A
+```
+
+#### **Random Forest**
+
+```{r warning=FALSE}
+                data.rf=catalogo.todos
+                data.rf$v=as.factor(data.rf$v)
+                #Random sampling
+                samplesize = 0.8*nrow(data.rf)
+                set.seed(100) # for reproducibility
+                index = sample(seq_len(nrow(data.rf)), size = samplesize, replace = F)
+                train= data.rf[index, ]
+                test = data.rf[-index,]
+              
+                
+                  # Fitting Random Forest and predicting
+                  rf.fit = randomForest(v ~., ntree = 500, mtry = 2, data = train)
+                  importance (rf.fit)
+```
+The confusion matrix, sensitivity, specificity, and accuracy of this model when predicting on the testing set are given by:
+
+```{r}
+                  predicted=as.numeric(predict(rf.fit,test))-1
+                  observed= test$v
+                  M=table (predicted,observed)
+                  M
+                  sensitivity(M)
+                  specificity(M)
+                  A=100*(M[1,1]+M[2,2])/(length(test$v))
+                  A
+
+```
+
+#### **Naive-Bayes:**
+
+
+```{r}
+ML=read.table(file = "ML.txt", header = T)
+cat.dat=ML[c("position","cat.v","cat.b","cat.l")]
+names(cat.dat)=c("position","v","b","l")
+
+rob.dat=ML[c("position","rob.v","rob.b","rob.l")]
+names(rob.dat)=c("position","v","b","l")
+
+ram.dat=ML[c("position","ram.v","ram.b","ram.l")]
+names(ram.dat)=c("position","v","b","l")
+
+var.dat=ML[c("position","var.v","var.b","var.l")]
+names(var.dat)=c("position","v","b","l")
+
+per.dat=ML[c("position","per.v","per.b","per.l")]
+names(per.dat)=c("position","v","b","l")
+
+verg.dat=ML[c("position","verg.v","verg.b","verg.l")]
+names(verg.dat)=c("position","v","b","l")
+
+balle.dat=ML[c("position","balle.v","balle.b","balle.l")]
+names(balle.dat)=c("position","v","b","l")
+
+catalogo.nb=rbind(cat.dat,rob.dat,ram.dat,var.dat,verg.dat,verg.dat,balle.dat)
+
+
+
+```
+
+
+
+```{r warning=FALSE}
+                data.nb=catalogo.nb
+                data.nb$v=as.factor(data.nb$v)
+                #Random sampling
+                samplesize = 0.8*nrow(data.nb)
+                set.seed(100) # for reproducibility
+                index = sample(seq_len(nrow(data.nb)), size = samplesize, replace = F)
+                train= data.nb[index, ]
+                test = data.nb[-index,]
+              
+                
+                  # Fitting Naive-Bayes and predicting
+                  NBmod = naiveBayes(v ~ .,data = train)
+                  NB.pred = predict(NBmod, newdata=test, type = "class")
+                  predicted=as.numeric(NB.pred)-1
+                  observed=test$v
+        
+                  M=table (predicted,observed)
+                  M
+                  sensitivity(M)
+                  specificity(M)
+                  A=100*(M[1,1]+M[2,2])/(length(test$v))
+                  A
+```
